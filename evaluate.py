@@ -16,9 +16,9 @@ pole_lengths = np.linspace(0.4, 1.8, 30)
 runs_per_length = 10
 
 
-def evaluate(strategy, seed):
+def evaluate(strategy, total_steps, seed):
 
-    name = strategy + "_seed" + str(seed)
+    name = strategy + "_" + str(total_steps // 1000) + "k_seed" + str(seed)
     model = QNetwork(4, 2)
     model.load_state_dict(torch.load("weights/" + name + ".pth", weights_only=True))
     model.eval()
@@ -43,6 +43,7 @@ def evaluate(strategy, seed):
     result = {
         "strategy": strategy,
         "seed": seed,
+        "total_steps": total_steps,
         "pole_lengths": list(pole_lengths),
         "avg": avg_scores,
         "std": std_scores,
@@ -57,8 +58,9 @@ def evaluate(strategy, seed):
     return avg_scores, std_scores
 
 
-# usage: python evaluate.py <strategy> <seed> [<seed> ...]
+# usage: python evaluate.py <strategy> <total_steps> <seed> [<seed> ...]
 if __name__ == "__main__":
     strategy = sys.argv[1]
-    for seed in sys.argv[2:]:
-        evaluate(strategy, int(seed))
+    total_steps = int(sys.argv[2])
+    for seed in sys.argv[3:]:
+        evaluate(strategy, total_steps, int(seed))

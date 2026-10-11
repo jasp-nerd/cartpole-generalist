@@ -24,7 +24,6 @@ epsilon_end = 0.05
 epsilon_decay_steps = 20000  # linear decay over the first 20000 steps
 warmup_steps = 1000          # fill the buffer before the first update
 target_update = 500          # copy the policy net into the target net every 500 steps
-total_steps = 1000000
 check_every = 10000          # validate and keep the best weights every 10000 steps
 min_length = 0.4
 max_length = 1.8
@@ -38,11 +37,11 @@ strategies = {
 }
 
 
-def train(strategy, seed):
+def train(strategy, total_steps, seed):
 
     noise_level = strategies[strategy][0]
     alpha = strategies[strategy][1]
-    name = strategy + "_seed" + str(seed)
+    name = strategy + "_" + str(total_steps // 1000) + "k_seed" + str(seed)
 
     random.seed(seed)
     np.random.seed(seed)
@@ -138,8 +137,9 @@ def train(strategy, seed):
     return episode_rewards, validation_log
 
 
-# usage: python train.py <strategy> <seed> [<seed> ...]
+# usage: python train.py <strategy> <total_steps> <seed> [<seed> ...]
 if __name__ == "__main__":
     strategy = sys.argv[1]
-    for seed in sys.argv[2:]:
-        train(strategy, int(seed))
+    total_steps = int(sys.argv[2])
+    for seed in sys.argv[3:]:
+        train(strategy, total_steps, int(seed))
