@@ -97,6 +97,7 @@ def update(policy_net, target_net, optimizer, memory, batch_size, gamma, alpha):
 
 # Validation, never uses the test protocol: normal force and pole lengths that are not in the test grid
 VAL_LENGTHS = np.linspace(0.45, 1.75, 8)
+VAL_MAX_STEPS = 10000  # with 2000 most late checkpoints hit the maximum, so the best one can not be picked
 
 
 def validate(q_network, pushes):
@@ -111,7 +112,7 @@ def validate(q_network, pushes):
         push_action = 0
         terminated = False
 
-        while not terminated and steps < 2000: # the 500 step time limit is ignored, like in the test
+        while not terminated and steps < VAL_MAX_STEPS: # the 500 step time limit is ignored, like in the test
 
             if pushes and steps >= 100 and steps % 100 == 0:
                 push_left = 3
