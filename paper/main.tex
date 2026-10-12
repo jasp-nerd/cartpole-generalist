@@ -21,10 +21,10 @@
 \vspace{1cm}
 {\Large Assignment 3: Group assignment\par}
 \vspace{1cm}
-{\large Team [number]\par}
+{\large Team 11\par}
 \vspace{1.5cm}
 {\large
-Jasper Meijerink, [student ID]\\[0.3cm]
+Jasper Meijerink, 2862115\\[0.3cm]
 [name], [student ID]\\[0.3cm]
 [name], [student ID]\par}
 \vspace{1.5cm}
@@ -42,7 +42,7 @@ Jasper Meijerink, [student ID]\\[0.3cm]
 \affiliation{\institution{Vrije Universiteit Amsterdam}}
 
 \begin{abstract}
-We train a deep Q-network (DQN) to balance CartPole for pole lengths from 0.4 to 1.8. The test also applies a push force that is 7.5 times stronger than the force during training. The rules let us change only the pole length during training. Thus, robustness to the stronger force must come from the agent. We compare a baseline DQN with three strategies in a $2\times2$ design: observation noise, a pessimistic TD target, and both together. % TODO: one sentence with the main result and one with the mechanism
+We train a deep Q-network (DQN) to balance CartPole for pole lengths from 0.4 to 1.8. In the test, the push force becomes 7.5 times stronger at step 500, and after step 1000 it grows without limit. During training, we can change only the pole length, so the agent never feels the stronger force. We compare a baseline DQN with observation noise, a pessimistic TD target, and both changes together, with 40 seeds and two training budgets. % TODO: main results (one or two sentences)
 \end{abstract}
 
 \keywords{Deep Q-learning, generalization, robustness, CartPole}
@@ -58,29 +58,32 @@ Domain randomization trains the agent on many random environments \cite{tobin201
 
 Our research question is: \emph{Can a DQN that trains only at the normal force stay balanced when the force becomes much stronger at test time, and does this robustness come from what the agent observes, from what it optimizes, or from both?}
 
-To answer this question, we compare four agents in a $2\times2$ design: a baseline DQN, a DQN with observation noise, a DQN with a pessimistic target, and a DQN with both changes. Because results in deep RL change much between random seeds \cite{henderson2018deep}, we train each agent with 10 seeds and use statistical tests. We also examine how the agents control the cart, to explain the differences.
+To answer this question, we compare four agents in a $2\times2$ design: a baseline DQN, a DQN with observation noise, a DQN with a pessimistic target, and a DQN with both changes. Because results in deep RL change much between random seeds \cite{henderson2018deep}, we train each agent with 40 seeds for a short and for a long training budget, and we use statistical tests. We also examine how the agents control the cart, to explain the differences.
 
 \section{Methods}
 
 \subsection{Environment and test}
 We use CartPole-v1 from Gym 0.26 \cite{brockman2016openai}. The state is $s = (x, \dot{x}, \theta, \dot{\theta})$: the cart position, the cart velocity, the pole angle and the pole angular velocity. The agent pushes the cart to the left or to the right, and it gets a reward of $+1$ for each step. An episode ends when $|\theta| > 12^{\circ}$ or $|x| > 2.4$. During training, an episode also stops after 500 steps (a time limit).
 
-The test runs a trained network on 30 pole lengths from 0.4 to 1.8, with 10 episodes per length. A test episode has no time limit. From step 500 to step 1000, the force magnitude is 75 instead of 10. After step 1000, the force magnitude is $25 + 0.01t$, where $t$ is the step number. The score of an episode is its number of steps, and the overall score is the mean over the 30 pole lengths.
+The test runs a trained network on 30 pole lengths from 0.4 to 1.8, with 10 episodes per length. A test episode has no time limit. From step 500 to step 1000, the force magnitude is 75 instead of 10. After step 1000, the force magnitude is $25 + 0.01t$, where $t$ is the step number. Thus, a long episode means that the agent stays balanced at a strong force: at step 30{,}000, the force is 325. The score of an episode is its number of steps, and the test score is the mean over the 30 pole lengths.
 
 \subsection{Baseline: deep Q-learning}
 Our baseline is DQN \cite{mnih2015human}. The network $Q(s,a;\theta)$ is the given network, with two hidden layers of 128 ReLU units and one output for each action. The agent selects actions with an $\epsilon$-greedy policy, and $\epsilon$ decreases linearly from 1.0 to 0.05 in the first 20{,}000 steps. The agent stores each transition in a replay buffer with a capacity of 50{,}000 transitions. After 1{,}000 steps, the agent does one gradient step per environment step, on a minibatch of 64 random transitions. The TD target is
 \begin{equation}
-y = r + \gamma (1 - d) \max_{a'} Q(s', a'; \theta^{-}),
+y_t = r_t + \gamma (1 - d_t) \max_{a} Q(s_{t+1}, a; \theta^{-}),
 \end{equation}
-where $\theta^{-}$ are the weights of the target network. The value $d$ is 1 only when the pole falls or the cart leaves the track. The time limit at 500 steps does not set $d = 1$, because the agent did not fail in that state \cite{pardo2018time}. The target network copies the weights of the policy network every 500 steps. The loss is the Huber loss between $Q(s,a;\theta)$ and $y$. We use Adam with a learning rate of $5 \times 10^{-4}$, $\gamma = 0.99$, and we clip the gradient norm at 10. Each run trains for 1{,}000{,}000 environment steps. At the start of each episode, we draw the pole length uniformly from $[0.4, 1.8]$ (domain randomization).
+where $\theta^{-}$ are the weights of the target network. The value $d_t$ is 1 only when the pole falls or the cart leaves the track. The time limit at 500 steps does not set $d_t = 1$, because the agent did not fail in that state \cite{pardo2018time}. The target network copies the weights of the policy network every 500 steps. The loss is the Huber loss between $Q(s_t,a_t;\theta)$ and $y_t$. We use Adam with a learning rate of 0.0005, $\gamma = 0.99$, and we clip the gradient norm at 10. At the start of each episode, we draw the pole length uniformly from $[0.4, 1.8]$ (domain randomization). Each run trains for 300{,}000 or for 1{,}000{,}000 environment steps.
 
 \subsection{Strategy 1: observation noise}
-The agent sees a noisy state $\tilde{s} = s + \varepsilon$, with $\varepsilon \sim \mathcal{N}(0, \mathrm{diag}(\sigma^2))$ and $\sigma = (0.05, 0.05, 0.005, 0.05)$ for $(x, \dot{x}, \theta, \dot{\theta})$. The agent selects its actions with $\tilde{s}$, and the replay buffer stores $\tilde{s}$. The environment itself does not change. With noise, states that are near each other must give the same action. Thus, we expect a smoother decision boundary and a policy that keeps a larger safety margin. A larger margin can help when the force becomes stronger.
+The agent sees a noisy state $\tilde{s}$: we add noise to $x$, $\dot{x}$, $\theta$ and $\dot{\theta}$ from a normal distribution with mean 0 and standard deviation $\sigma = (0.05, 0.05, 0.005, 0.05)$. The agent selects its actions with $\tilde{s}$, and the replay buffer stores $\tilde{s}$. The environment itself does not change, and at test time the agent sees the true state. With noise, states that are near each other must give the same action. Thus, we expect a smoother policy that keeps a larger safety margin. A larger margin can help when the force becomes stronger.
 
 \subsection{Strategy 2: pessimistic target}
 We replace the maximum in Equation (1) by a mix of the best and the worst next action:
 \begin{equation}
-y = r + \gamma (1 - d) \left[ (1 - \alpha) \max_{a'} Q(s', a'; \theta^{-}) + \alpha \min_{a'} Q(s', a'; \theta^{-}) \right],
+\begin{split}
+y_t = r_t + \gamma (1 - d_t) [ & (1 - \alpha) \max_{a} Q(s_{t+1}, a; \theta^{-}) \\
+& + \alpha \min_{a} Q(s_{t+1}, a; \theta^{-}) ],
+\end{split}
 \end{equation}
 with $\alpha = 0.05$. This target is the value of a policy that does the worst action with probability $\alpha$ \cite{tessler2019action, klima2019robust}. The agent does not execute bad actions during training: only the target changes. With this target, a state near failure gets a lower value. Thus, we expect the agent to stay further away from such states.
 
@@ -88,23 +91,30 @@ with $\alpha = 0.05$. This target is the value of a policy that does the worst a
 Strategy 3 uses the observation noise and the pessimistic target together. This strategy shows if the two changes add up or overlap.
 
 \subsection{Model selection}
-DQN training is not stable: the test score of one run can change much from one checkpoint to the next. Thus, we do not keep the last weights. Every 10{,}000 steps, we validate the policy network on 8 pole lengths from 0.45 to 1.75. Validation uses the normal force, no time limit, and a maximum of 2{,}000 steps. We run each validation episode once without and once with a forced push of 3 steps every 100 steps. We keep the weights with the highest sum of both validation scores. The validation never uses the test or the stronger test force.
+DQN training is not stable: the test score of one run can change much from one checkpoint to the next. In our pilot, the last weights scored 2 to 10 times lower than the checkpoint that validation selected. Thus, we do not keep the last weights. Every 10{,}000 steps, we validate the policy network on 8 pole lengths from 0.45 to 1.75. Validation uses the normal force and no time limit, and it stops an episode after 10{,}000 steps. We run each validation episode once without and once with a forced push of 3 steps every 100 steps. We keep the weights with the highest sum of both validation scores, and the later weights if two sums are equal. Validation never uses the test or the stronger test force. In the pilot, this validation score had a rank correlation of 0.96 with the test score.
 
 \subsection{Experimental setup and statistics}
-We selected $\sigma$ and $\alpha$ in a pilot study with 300{,}000 training steps. In the pilot, we compared the noise levels $0.5\sigma$, $\sigma$ and $2\sigma$, and $\alpha \in \{0.02, 0.05, 0.1, 0.2\}$. We do not use the pilot runs in our results. We train each of the four agents with 10 seeds (0 to 9). We test the kept weights of each run with the test script. We fix the start states of the test episodes with a seed, so all agents get the same test episodes.
+We selected $\sigma$ and $\alpha$ in a pilot study with 300{,}000 training steps, 10 seeds and an earlier version of our code. In the pilot, we compared the noise levels $0.5\sigma$, $\sigma$ and $2\sigma$, and $\alpha$ = 0.02, 0.05, 0.1 and 0.2. We also tested more than 20 other changes, for example Double DQN, random pushes during training and other pole length distributions. None of them gave a gain that we could repeat on new seeds. The pilot runs are not part of our results.
 
-The scores are skewed and differ much between seeds, so we compare $\log_{10}$ scores. For each strategy, we compare the 10 scores with the 10 baseline scores with a two-sided permutation test. We correct the three $p$-values with the Holm method \cite{holm1979simple}. We also report the median and the interquartile mean (IQM) \cite{agarwal2021deep}. The code, the trained networks and all results are available on GitHub.\footnote{\url{https://github.com/jasp-nerd/cartpole-generalist}} We used Python 3.12, PyTorch 2.14.1 and Gym 0.26.2.
+For the results, we train each agent with seeds 0 to 39, for 300{,}000 and for 1{,}000{,}000 steps (320 runs). After the first 20 seeds, the intervals were wide. Thus, before we saw any result of seeds 20 to 39, we decided to use 40 seeds and no more. We test the kept weights of each run with the test script. We fix the start states of the test episodes with a seed, so all agents start from the same states.
 
-\section{Results and Discussion}
-% TODO: Figure 1, bar plot per strategy (mean and std per pole length, overall mean in the title)
-% TODO: Table 1, mean, median, IQM, Holm p-value and wins against the baseline for each strategy
-% TODO: behaviour, cart offset and pole angle before step 500, failure causes
-% TODO: comparison with the baseline and possible explanations
+The scores are skewed and differ much between seeds, so we compare $\log_{10}$ scores. We report the ratio of the geometric mean scores, with a 95\% bootstrap interval \cite{agarwal2021deep}. For each budget, we compare each strategy with the baseline with a two-sided permutation test, and we correct the three $p$-values with the Holm method \cite{holm1979simple}. We also test the main effect of each change in the $2\times2$ design: the 80 runs with the change against the 80 runs without it. For each strategy, we submit the network with the median test score after 1{,}000{,}000 steps. The code, these networks and all results are available on GitHub.\footnote{\url{https://github.com/jasp-nerd/cartpole-generalist}} We used Python 3.12, PyTorch 2.14.1 and Gym 0.26.2.
+
+\section{Results}
+% TODO: Table 1 (mean, median, worst run, ratio against the baseline with CI, Holm p) and Figure 1 (paper/scores.pdf)
+% TODO: compare each strategy with the baseline after 300k and after 1M steps, and the main effects of the 2x2 design
+% TODO: behaviour of the agents (results/behaviour_*.json)
+% all numbers and both figures come from analysis.py
+
+\section{Discussion}
+% TODO: explain the results, compare with what we expected in the methods, limitations
 
 \section{Conclusion}
-% TODO
+% TODO: answer the research question
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{references}
+
+% TODO: appendix page with the bar plots of the submitted networks (paper/bar_plots.pdf)
 
 \end{document}
