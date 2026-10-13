@@ -25,7 +25,7 @@
 \vspace{1.5cm}
 {\large
 Jasper Meijerink, 2862115\\[0.3cm]
-[name], [student ID]\\[0.3cm]
+Skick Bakker, 2862824\\[0.3cm]
 [name], [student ID]\par}
 \vspace{1.5cm}
 {\large 16 October 2026\par}
@@ -36,7 +36,7 @@ Jasper Meijerink, 2862115\\[0.3cm]
 
 \author{Jasper Meijerink}
 \affiliation{\institution{Vrije Universiteit Amsterdam}}
-\author{[name]}
+\author{Skick Bakker}
 \affiliation{\institution{Vrije Universiteit Amsterdam}}
 \author{[name]}
 \affiliation{\institution{Vrije Universiteit Amsterdam}}
@@ -107,8 +107,134 @@ The scores are skewed and differ much between seeds, so we compare $\log_{10}$ s
 % TODO: behaviour of the agents (results/behaviour_*.json)
 % all numbers and both figures come from analysis.py
 
+\subsection{Test Performance}
+Table \ref{tab:results} summarizes test performances at 300K and 1M training steps. At 300k steps noise showed significant improvement over the baseline (ratio $=1.39$, 95\% CI $[1.13,1.71]$,
+Holm-adjusted $p=0.0088$). The combined noise and pessimistic strategy also outperformed the baseline (ratio $=1.28$, 95\% CI $[1.07,1.56]$, Holm-adjusted $p=0.0214$), whereas the pessimistic strategy alone did not (ratio $=1.15$, 95\% CI $[0.94,1.42]$,
+Holm-adjusted $p=0.1722$).
+
+With 1M steps, none of the strategies significantly outperformed the baseline. The noise strategy achieved the highest mean score (40705), the difference with the baseline was not significant (ratio $=1.10$, 95\% CI $[0.94,1.29]$, Holm-adjusted $p=0.7189$). The factorial analysis supports a positive main
+effect of noise at 300k (ratio $=1.24$, $p=0.0017$), but
+not at 1M (ratio $=1.05$, $p=0.4261$). The main effect of
+pessimistic training was not significant at either checkpoint
+($p=0.6310$ at 300k; $p=0.5657$ at 1M).
+
+All strategies showed significant improvement going from 300k steps to 1M steps. The baseline increased by a reported ration of 1.56 ($p=0.0001$), noise by 1.24 ($p=0.0221$), pessimistic training by 1.37 ($p=0.0002$), and the combined strategy by 1.23 ($p=0.0170$).
+
+\subsection{Agent Behaviour}
+
+Figure~\ref{fig:scores} shows test scores at both checkpoints,
+while Fig.~\ref{fig:behaviour} illustrates behaviour across
+different pole lengths. At 300k steps, the combined strategy had the lowest mean absolute pole angle ($0.0240$) and the least episodes falling before 1000 steps ($1.4\%$). At 1M steps, noise had the lowest mean absolute pole angle ($0.0198$), while the combined strategy had the lowest amount of episodes falling before 1000 steps ($1.2\%$). The early fall rate decreased when going from 300k steps to 1M steps for all strategies.
+
+\begin{table*}[t]
+    \centering
+    \caption{}
+    \label{tab:results}
+    \small
+    \setlength{\tabcolsep}{2pt}
+    \begin{tabular}{llrrrrrrl}
+        \toprule
+        Steps & Strategy & Mean & Median & Worst &
+        SD ($\log_{10}$) & Saturated/run &
+        Ratio [95\% CI] & Holm $p$ \\
+        \midrule
+        300k & Baseline
+        & 25052 & 23603 & 4663 & 0.219 & 0.3
+        & 1.00 (ref.) & -- \\
+
+        300k & Noise
+        & 33921 & 31566 & 8436 & 0.193 & 0.5
+        & 1.39 [1.13, 1.71] & 0.0088 \\
+
+        300k & Pessimistic
+        & 28159 & 28222 & 10946 & 0.180 & 0.7
+        & 1.15 [0.94, 1.42] & 0.1722 \\
+
+        300k & Noise + Pessimistic
+        & 30441 & 28642 & 14528 & 0.144 & 1.2
+        & 1.28 [1.07, 1.56] & 0.0214 \\
+        \midrule
+        1M & Baseline
+        & 37114 & 38093 & 14950 & 0.158 & 1.9
+        & 1.00 (ref.) & -- \\
+
+        1M & Noise
+        & 40705 & 45018 & 10867 & 0.156 & 5.2
+        & 1.10 [0.94, 1.29] & 0.7189 \\
+
+        1M & Pessimistic
+        & 37313 & 39649 & 12146 & 0.147 & 4.3
+        & 1.02 [0.87, 1.19] & 1.0000 \\
+
+        1M & Noise + Pessimistic
+        & 37964 & 37771 & 7765 & 0.177 & 9.2
+        & 1.01 [0.85, 1.20] & 1.0000 \\
+        \bottomrule
+    \end{tabular}
+\end{table*}
+
+\begin{table}[t]
+    \centering
+    \caption{Main effects of noise and pessimistic training
+    in the $2\times2$ factorial design.}
+    \label{tab:2x2}
+    \begin{tabular}{llrr}
+        \toprule
+        Steps & Effect & Ratio & $p$-value \\
+        \midrule
+        300k & Noise & 1.24 & 0.0017 \\
+        300k & Pessimistic & 1.03 & 0.6310 \\
+        \midrule
+        1M & Noise & 1.05 & 0.4261 \\
+        1M & Pessimistic & 0.97 & 0.5657 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[t]
+    \centering
+    \caption{Performance improvement from 300k to 1M
+    training steps. Ratios compare the same strategy
+    across training checkpoints.}
+    \label{tab:training-progress}
+    \begin{tabular}{lrr}
+        \toprule
+        Strategy & Ratio (1M / 300k) & $p$-value \\
+        \midrule
+        Baseline & 1.56 & 0.0001 \\
+        Noise & 1.24 & 0.0221 \\
+        Pessimistic & 1.37 & 0.0002 \\
+        Noise + Pessimistic & 1.23 & 0.0170 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{bar_plots.pdf}
+    \caption{Behavioural evaluation of the four trained agents
+    across pole lengths.}
+    \label{fig:behaviour}
+\end{figure}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{scores.pdf}
+    \caption{Test scores at 300k and 1M training steps for
+    the baseline, noise, pessimistic, and noise + pessimistic.}
+    \label{fig:scores}
+\end{figure}
+
+
+
+
 \section{Discussion}
 % TODO: explain the results, compare with what we expected in the methods, limitations
+
+Noise showed a significant improvment over the baseline at 300k steps, suggesting it may help with exploration capability or the early stages of learning. However, after 1M steps the benefit is no longer statistically significant. Pessimistic training did not show any effect at either checkpoint that was statistically significant. Its usefulness may depend on factors that we did not account for. The amount of early falls, within the first 1000 steps, decreased for all strategies between 300k and 1M steps, combined with an increased mean for every strategy between 300k and 1M, shows that improvements are made after 300k steps of training.
+
+\subsection{Limitations}
+The results compare only two training checkpoints. Time and computational resources, more time and computational resources allow for more training, through which extra checkpoints could be checked. 
 
 \section{Conclusion}
 % TODO: answer the research question
