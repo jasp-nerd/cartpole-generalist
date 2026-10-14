@@ -42,7 +42,7 @@ Skick Bakker, 2862824\\[0.3cm]
 \affiliation{\institution{Vrije Universiteit Amsterdam}}
 
 \begin{abstract}
-We train a deep Q-network (DQN) to balance CartPole for pole lengths from 0.4 to 1.8. In the test, the push force becomes 7.5 times stronger at step 500, and after step 1000 it grows without limit. During training, we can change only the pole length, so the agent never feels the stronger force. We compare a baseline DQN with observation noise, a pessimistic TD target, and both changes together, with 40 seeds and two training budgets. % TODO: main results (one or two sentences)
+We train a deep Q-network (DQN) to balance CartPole for pole lengths from 0.4 to 1.8. In the test, the push force becomes 7.5 times stronger at step 500, and after step 1000 it grows without limit. During training, we can change only the pole length, so the agent never feels the stronger force. We compare a baseline DQN with observation noise, a pessimistic TD target, and both changes together, with 40 seeds and two training budgets. Noise had a significant improvement at 300k steps, but lost it at 1M steps. The other strategies did not have a significant improvement over the baseline.
 \end{abstract}
 
 \keywords{Deep Q-learning, generalization, robustness, CartPole}
@@ -102,10 +102,6 @@ For the results, we train each agent with seeds 0 to 39, for 300{,}000 and for 1
 The scores are skewed and differ much between seeds, so we compare $\log_{10}$ scores. We report the ratio of the geometric mean scores, with a 95\% bootstrap interval \cite{agarwal2021deep}. For each budget, we compare each strategy with the baseline with a two-sided permutation test, and we correct the three $p$-values with the Holm method \cite{holm1979simple}. We also test the main effect of each change in the $2\times2$ design: the 80 runs with the change against the 80 runs without it. For each strategy, we submit the network with the median test score after 1{,}000{,}000 steps. The code, these networks and all results are available on GitHub.\footnote{\url{https://github.com/jasp-nerd/cartpole-generalist}} We used Python 3.12, PyTorch 2.14.1 and Gym 0.26.2.
 
 \section{Results}
-% TODO: Table 1 (mean, median, worst run, ratio against the baseline with CI, Holm p) and Figure 1 (paper/scores.pdf)
-% TODO: compare each strategy with the baseline after 300k and after 1M steps, and the main effects of the 2x2 design
-% TODO: behaviour of the agents (results/behaviour_*.json)
-% all numbers and both figures come from analysis.py
 
 \subsection{Test Performance}
 Table \ref{tab:results} summarizes test performances at 300K and 1M training steps. At 300k steps noise showed significant improvement over the baseline (ratio $=1.39$, 95\% CI $[1.13,1.71]$,
@@ -124,7 +120,7 @@ All strategies showed significant improvement going from 300k steps to 1M steps.
 
 Figure~\ref{fig:scores} shows test scores at both checkpoints,
 while Fig.~\ref{fig:behaviour} illustrates behaviour across
-different pole lengths. At 300k steps, the combined strategy had the lowest mean absolute pole angle ($0.0240$) and the least episodes falling before 1000 steps ($1.4\%$). At 1M steps, noise had the lowest mean absolute pole angle ($0.0198$), while the combined strategy had the lowest amount of episodes falling before 1000 steps ($1.2\%$). The early fall rate decreased when going from 300k steps to 1M steps for all strategies.
+different pole lengths. At 300k steps, the combined strategy had the lowest mean absolute pole angle ($0.0240$) and the least episodes falling before 1000 steps ($1.4\%$). At 1M steps, noise had the lowest mean absolute pole angle ($0.0198$), while the combined strategy had the lowest amount of episodes falling before 1000 steps ($1.2\%$). The early fall rate decreased when going from 300k steps to 1M steps for all strategies. The early fall rate was negatively correlated with log-score ($r=-0.48$ at 300k and $r=-0.39$ at 1M), whereas mean absolute position showed a weaker correlation ($r=-0.12$ and $r=-0.10$).
 
 \begin{table*}[t]
     \centering
@@ -219,7 +215,7 @@ different pole lengths. At 300k steps, the combined strategy had the lowest mean
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=\columnwidth]{scores.pdf}
+    \includegraphics[width=0.9\columnwidth]{scores.pdf}
     \caption{Test scores at 300k and 1M training steps for
     the baseline, noise, pessimistic, and noise + pessimistic.}
     \label{fig:scores}
@@ -229,19 +225,38 @@ different pole lengths. At 300k steps, the combined strategy had the lowest mean
 
 
 \section{Discussion}
-% TODO: explain the results, compare with what we expected in the methods, limitations
 
-Noise showed a significant improvment over the baseline at 300k steps, suggesting it may help with exploration capability or the early stages of learning. However, after 1M steps the benefit is no longer statistically significant. Pessimistic training did not show any effect at either checkpoint that was statistically significant. Its usefulness may depend on factors that we did not account for. The amount of early falls, within the first 1000 steps, decreased for all strategies between 300k and 1M steps, combined with an increased mean for every strategy between 300k and 1M, shows that improvements are made after 300k steps of training.
+We expected observation noise to encourage a smoother policy that maintains a larger safety margin. The significant performance gain at 300k steps is consistent with this statement. The lower mean absolute position and pole angle of the noise strategy support the possibility of a more conservative control. However, these behavioral differences do not necessarily establish that policy smoothness caused the improvement. At 1M steps, the noise strategy no longer significantly outperformed the baseline, suggesting that its benefit may be more active in the earlier stages of training.
+
+We expected pessimistic targets to discourage actions that lead to failure. Pessimistic training alone did not show a significant improvement over the baseline at either checkpoint, thus the results do not support a clear performance benefit from this change. The combined strategy had the lowest early fall rate at both checkpoints and the best worst-run score at 300k steps, which is consistent with a possible robustness benefit. However, in our experimental setup we cannot conclude if the combination of the strategies provides an additional benefit beyond the noise strategy alone.
+
+The amount of early falls, within the first 1000 steps, decreased for all strategies between 300k and 1M steps, combined with an increased mean for every strategy between 300k and 1M, shows that improvements are made after 300k steps of training.
 
 \subsection{Limitations}
-The results compare only two training checkpoints. Time and computational resources, more time and computational resources allow for more training, through which extra checkpoints could be checked. 
+The results compare only two training checkpoints; additional checkpoints and experiments would help determine how the effects evolve throughout training and whether the observed differences are robust. 
 
 \section{Conclusion}
-% TODO: answer the research question
+
+This paper investigated whether observation noise and pessimistic TD targets improve DQN robustness to stronger forces not seen during training. Noise had a significant improvement on test performance over the baseline at 300k steps, but no strategies statistically outperformed the baseline at 1M steps. The pessimistic strategy alone did not show a significant performance benefit, While the combined strategy reduced the percentage of early falls. Overall, the results suggest that observation noise can help in the early phases of training, but neither strategy showed a lasting performance advantage under the tested conditions.
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{references}
 
-% TODO: appendix page with the bar plots of the submitted networks (paper/bar_plots.pdf)
+\clearpage
+\appendix
+\section{appendix}
+
+
+\begin{center}
+    \includegraphics[width=\textwidth]{bar_plots.pdf}
+\end{center}
+
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.9\textwidth]{scores.pdf}
+    \label{fig:scores}
+\end{figure*}
+
 
 \end{document}
