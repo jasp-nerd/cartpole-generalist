@@ -11,6 +11,7 @@
 \copyrightyear{2026}
 
 
+
 \begin{document}
 
 % Cover page: only the identification info (allowed as an extra page)
@@ -226,7 +227,7 @@ different pole lengths. At 300k steps, the combined strategy had the lowest mean
 
 \section{Discussion}
 
-We expected observation noise to encourage a smoother policy that maintains a larger safety margin. The significant performance gain at 300k steps is consistent with this statement. The lower mean absolute position and pole angle of the noise strategy support the possibility of a more conservative control. However, these behavioral differences do not necessarily establish that policy smoothness caused the improvement. At 1M steps, the noise strategy no longer significantly outperformed the baseline, suggesting that its benefit may be more active in the earlier stages of training.
+We expected observation noise to encourage a smoother policy that maintains a larger safety margin. The significant performance gain at 300k steps is consistent with this statement. The lower mean absolute pole angle of the noise strategy at 1M steps support the possibility of a more conservative control. However, these behavioral differences do not necessarily establish that policy smoothness caused the improvement. At 1M steps, the noise strategy no longer significantly outperformed the baseline, suggesting that its benefit may be more active in the earlier stages of training.
 
 We expected pessimistic targets to discourage actions that lead to failure. Pessimistic training alone did not show a significant improvement over the baseline at either checkpoint, thus the results do not support a clear performance benefit from this change. The combined strategy had the lowest early fall rate at both checkpoints and the best worst-run score at 300k steps, which is consistent with a possible robustness benefit. However, in our experimental setup we cannot conclude if the combination of the strategies provides an additional benefit beyond the noise strategy alone.
 
@@ -237,7 +238,7 @@ The results compare only two training checkpoints; additional checkpoints and ex
 
 \section{Conclusion}
 
-This paper investigated whether observation noise and pessimistic TD targets improve DQN robustness to stronger forces not seen during training. Noise had a significant improvement on test performance over the baseline at 300k steps, but no strategies statistically outperformed the baseline at 1M steps. The pessimistic strategy alone did not show a significant performance benefit, While the combined strategy reduced the percentage of early falls. Overall, the results suggest that observation noise can help in the early phases of training, but neither strategy showed a lasting performance advantage under the tested conditions.
+This paper investigated whether observation noise and pessimistic TD targets improve DQN robustness to stronger forces not seen during training. At 300k steps, noise alone and noise combined with the pessimistic target significantly improved on the baseline, but neither did at 1M steps. The pessimistic strategy alone did not show a significant performance benefit, While the combined strategy reduced the percentage of early falls. Overall, the results suggest that observation noise can help in the early phases of training, but neither strategy showed a lasting performance advantage under the tested conditions.
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{references}
@@ -246,15 +247,12 @@ This paper investigated whether observation noise and pessimistic TD targets imp
 \appendix
 \section{appendix}
 
-
 \begin{center}
     \includegraphics[width=\textwidth]{bar_plots.pdf}
 \end{center}
-
-
 \begin{figure*}[t]
     \centering
-    \includegraphics[width=0.9\textwidth]{scores.pdf}
+    \includegraphics[width=0.5\textwidth]{scores.pdf}
     \label{fig:scores}
 \end{figure*}
 
