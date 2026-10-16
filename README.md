@@ -11,7 +11,6 @@ We train a deep Q-network to balance CartPole-v1 for pole lengths from 0.4 to 1.
 - evaluate.py: runs the official test (test_pole_length from test_script.py, unchanged) on trained weights, with fixed start states
 - behaviour.py: records cart position, pole angle and early falls during the first 1000 test steps
 - analysis.py: statistics for the paper (geometric mean ratios, bootstrap intervals, permutation tests with Holm correction, 2x2 main effects)
-- plots.py: makes the figures in the paper
 - test_script.py: the test script provided by the course
 - weights/: the submitted network for each strategy
 - results/: training logs, test scores and behaviour results for every run (4 strategies x 2 budgets x 40 seeds)
@@ -43,6 +42,4 @@ Run all commands from the repository root. Strategy names are baseline, noise, p
 
     python analysis.py
 
-5. Figures (saves paper/bar_plots.pdf and paper/scores.pdf):
 
-    python plots.py
