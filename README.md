@@ -1,8 +1,8 @@
-Observation Noise and Pessimistic Targets
+# Observation Noise and Pessimistic Targets
 
 Code for Assignment 3 of Introduction to Reinforcement Learning, VU Amsterdam, Team 11.
 
-We train a deep Q-network to balance CartPole-v1 for pole lengths from 0.4 to 1.8. The test script makes the push force much stronger after step 500, and the agent never sees that force during training. We ask whether robustness to this unseen force comes from what the agent observes , from what it optimizes, or from both.
+We train a deep Q-network to balance CartPole-v1 for pole lengths from 0.4 to 1.8. The test script makes the push force much stronger after step 500, and the agent never sees that force during training. We ask whether robustness to this unseen force comes from what the agent observes, from what it optimizes, or from both.
 
 ## Files
 
@@ -20,7 +20,7 @@ We train a deep Q-network to balance CartPole-v1 for pole lengths from 0.4 to 1.
 
     pip install -r requirements.txt
 
-We used Python 3.12, PyTorch [version] and Gym 0.26.2.
+We used Python 3.12, PyTorch 2.14.1 and Gym 0.26.2.
 
 ## Reproducing the results
 
@@ -38,7 +38,7 @@ Run all commands from the repository root. Strategy names are baseline, noise, p
 
     python behaviour.py noise 1000000 0 1 2 3
 
-4. Statistics (prints every number in the results tables):
+4. Statistics (prints every number in the paper and saves both figures):
 
     python analysis.py
 

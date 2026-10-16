@@ -43,7 +43,7 @@ Omar Ouaissa, 2760086\par}
 \affiliation{\institution{Vrije Universiteit Amsterdam}}
 
 \begin{abstract}
-We train a deep Q-network (DQN) to balance CartPole for pole lengths from 0.4 to 1.8. In the test, the push force becomes 7.5 times stronger at step 500, and after step 1000 it grows without limit. During training, we can change only the pole length, so the agent never feels the stronger force. We compare a baseline DQN with observation noise, a pessimistic TD target, and both changes together, with 40 seeds and two training budgets. Noise had a significant improvement at 300k steps, but lost it at 1M steps. The other strategies did not have a significant improvement over the baseline.
+We train a deep Q-network (DQN) to balance CartPole for pole lengths from 0.4 to 1.8. In the test, the push force becomes 7.5 times stronger at step 500, and after step 1000 it grows without limit. During training, we can change only the pole length, so the agent never feels the stronger force. We compare a baseline DQN with observation noise, a pessimistic TD target, and both changes together, with 40 seeds and two training budgets. Noise, alone and together with the pessimistic target, had a significant improvement at 300k steps, but not at 1M steps. The pessimistic target alone did not have a significant improvement over the baseline.
 \end{abstract}
 
 \keywords{Deep Q-learning, generalization, robustness, CartPole}
@@ -56,7 +56,7 @@ Reinforcement learning (RL) agents often train in one set of conditions and then
 
 Our agent must balance a pole on a cart for pole half-lengths from 0.4 to 1.8. The agent uses one fixed neural network, and this network does not receive the pole length. During training, we can change only the pole length. The test adds a second difficulty. From step 500, the push force on the cart increases from 10 to 75. After step 1000, the force starts at 35 and increases at each step. The agent never feels these forces during training. Thus, the agent must generalize to all pole lengths, and it must also be robust to a force that it never saw.
 
-Domain randomization trains the agent on many random environments \cite{tobin2017domain, peng2018sim}. This method can cover the range of pole lengths. It cannot cover the stronger force, because the rules do not let us change the force. Thus, the robustness must come from the agent itself. We study two ideas from robust RL that do not change the environment. The first idea changes what the agent observes: we add small random noise to the state that the agent sees \cite{rudin2021learning, zhang2020robust}. The second idea changes what the agent optimizes: a pessimistic TD target also counts the worst next action \cite{tessler2019action, klima2019robust}.
+Domain randomization trains on many random versions of the simulator \cite{tobin2017domain, peng2018sim}. This method can cover the range of pole lengths. It cannot cover the stronger force, because the rules do not let us change the force. Thus, the robustness must come from the agent itself. We study two ideas that do not change the environment. The first idea, from sim-to-real RL, changes what the agent observes: we add small random noise to the state that the agent sees \cite{peng2018sim, rudin2021learning}. The second idea, from robust RL, changes what the agent optimizes: a pessimistic TD target also counts the worst next action \cite{tessler2019action, klima2019robust}.
 
 Our research question is: \emph{Can a DQN that trains only at the normal force stay balanced when the force becomes much stronger at test time, and does this robustness come from what the agent observes, from what it optimizes, or from both?}
 
@@ -74,7 +74,7 @@ Our baseline is DQN \cite{mnih2015human}. The network $Q(s,a;\theta)$ is the giv
 \begin{equation}
 y_t = r_t + \gamma (1 - d_t) \max_{a} Q(s_{t+1}, a; \theta^{-}),
 \end{equation}
-where $\theta^{-}$ are the weights of the target network. The value $d_t$ is 1 only when the pole falls or the cart leaves the track. The time limit at 500 steps does not set $d_t = 1$, because the agent did not fail in that state \cite{pardo2018time}. The target network copies the weights of the policy network every 500 steps. The loss is the Huber loss between $Q(s_t,a_t;\theta)$ and $y_t$. We use Adam with a learning rate of 0.0005, $\gamma = 0.99$, and we clip the gradient norm at 10. At the start of each episode, we draw the pole length uniformly from $[0.4, 1.8]$ (domain randomization). Each run trains for 300{,}000 or for 1{,}000{,}000 environment steps.
+where $\theta^{-}$ are the weights of the target network. The value $d_t$ is 1 only when the pole falls or the cart leaves the track. The time limit at 500 steps does not set $d_t = 1$, because the agent did not fail in that state and the test has no time limit \cite{pardo2018time}. The target network copies the weights of the policy network every 500 steps. The loss is the Huber loss between $Q(s_t,a_t;\theta)$ and $y_t$. We use Adam with a learning rate of 0.0005, $\gamma = 0.99$, and we clip the gradient norm at 10. At the start of each episode, we draw the pole length uniformly from $[0.4, 1.8]$ (domain randomization). Each run trains for 300{,}000 or for 1{,}000{,}000 environment steps.
 
 \subsection{Strategy 1: observation noise}
 The agent sees a noisy state $\tilde{s}$: we add noise to $x$, $\dot{x}$, $\theta$ and $\dot{\theta}$ from a normal distribution with mean 0 and standard deviation $\sigma = (0.05, 0.05, 0.005, 0.05)$. The agent selects its actions with $\tilde{s}$, and the replay buffer stores $\tilde{s}$. The environment itself does not change, and at test time the agent sees the true state. With noise, states that are near each other must give the same action. Thus, we expect a smoother policy that keeps a larger safety margin. A larger margin can help when the force becomes stronger.
@@ -87,174 +87,97 @@ y_t = r_t + \gamma (1 - d_t) [ & (1 - \alpha) \max_{a} Q(s_{t+1}, a; \theta^{-})
 & + \alpha \min_{a} Q(s_{t+1}, a; \theta^{-}) ],
 \end{split}
 \end{equation}
-with $\alpha = 0.05$. This target is the value of a policy that does the worst action with probability $\alpha$ \cite{tessler2019action, klima2019robust}. The agent does not execute bad actions during training: only the target changes. With this target, a state near failure gets a lower value. Thus, we expect the agent to stay further away from such states.
+with $\alpha = 0.05$. This target is the value of a policy that does the worst action with probability $\alpha$ \cite{tessler2019action}, and it is the target of Klima et al. \cite{klima2019robust}. As in their work, the agent does not execute bad actions during training: only the target changes. With this target, a state near failure gets a lower value. Thus, we expect the agent to stay further away from such states.
 
 \subsection{Strategy 3: both}
 Strategy 3 uses the observation noise and the pessimistic target together. This strategy shows if the two changes add up or overlap.
 
 \subsection{Model selection}
-DQN training is not stable: the test score of one run can change much from one checkpoint to the next. In our pilot, the last weights scored 2 to 10 times lower than the checkpoint that validation selected. Thus, we do not keep the last weights. Every 10{,}000 steps, we validate the policy network on 8 pole lengths from 0.45 to 1.75. Validation uses the normal force and no time limit, and it stops an episode after 10{,}000 steps. We run each validation episode once without and once with a forced push of 3 steps every 100 steps. We keep the weights with the highest sum of both validation scores, and the later weights if two sums are equal. Validation never uses the test or the stronger test force. In the pilot, this validation score had a rank correlation of 0.96 with the test score.
+DQN training is not stable: the test score of one run can change much from one checkpoint to the next. In our pilot, the last weights scored 2 to 10 times lower than the checkpoint that validation selected. Thus, we do not keep the last weights. Every 10{,}000 steps, we validate the policy network on 8 pole lengths from 0.45 to 1.75. Validation uses the normal force and no time limit, and it stops an episode after 10{,}000 steps. We run each validation episode once without and once with pushes: every 100 steps, one random action replaces the action of the agent for 3 steps. We keep the weights with the highest sum of both validation scores, and the later weights if two sums are equal. Validation never uses the test or the stronger test force. In the pilot, this validation score had a rank correlation of 0.96 with the test score.
 
 \subsection{Experimental setup and statistics}
 We selected $\sigma$ and $\alpha$ in a pilot study with 300{,}000 training steps, 10 seeds and an earlier version of our code. In the pilot, we compared the noise levels $0.5\sigma$, $\sigma$ and $2\sigma$, and $\alpha$ = 0.02, 0.05, 0.1 and 0.2. We also tested more than 20 other changes, for example Double DQN, random pushes during training and other pole length distributions. None of them gave a gain that we could repeat on new seeds. The pilot runs are not part of our results.
 
 For the results, we train each agent with seeds 0 to 39, for 300{,}000 and for 1{,}000{,}000 steps (320 runs). After the first 20 seeds, the intervals were wide. Thus, before we saw any result of seeds 20 to 39, we decided to use 40 seeds and no more. We test the kept weights of each run with the test script. We fix the start states of the test episodes with a seed, so all agents start from the same states.
 
-The scores are skewed and differ much between seeds, so we compare $\log_{10}$ scores. We report the ratio of the geometric mean scores, with a 95\% bootstrap interval \cite{agarwal2021deep}. For each budget, we compare each strategy with the baseline with a two-sided permutation test, and we correct the three $p$-values with the Holm method \cite{holm1979simple}. We also test the main effect of each change in the $2\times2$ design: the 80 runs with the change against the 80 runs without it. For each strategy, we submit the network with the median test score after 1{,}000{,}000 steps. The code, these networks and all results are available on GitHub.\footnote{\url{https://github.com/jasp-nerd/cartpole-generalist}} We used Python 3.12, PyTorch 2.14.1 and Gym 0.26.2.
+The scores are skewed and differ much between seeds, so we compare $\log_{10}$ scores. We report the ratio of the geometric mean scores. As recommended by Agarwal et al. \cite{agarwal2021deep}, we give a 95\% percentile bootstrap interval over the seeds. For each budget, we compare each strategy with the baseline with a two-sided permutation test, and we correct the three $p$-values with the Holm method \cite{holm1979simple}. We also test the main effect of each change in the $2\times2$ design: the 80 runs with the change against the 80 runs without it, and we compare the two budgets of each strategy. For each strategy, we submit the network with the median test score after 1{,}000{,}000 steps. The code, these networks and all results are available on GitHub.\footnote{\url{https://github.com/jasp-nerd/cartpole-generalist}} We used Python 3.12, PyTorch 2.14.1 and Gym 0.26.2.
 
 \section{Results}
 
 \subsection{Test Performance}
-Table \ref{tab:results} summarizes test performances at 300K and 1M training steps. At 300k steps noise showed significant improvement over the baseline (ratio $=1.39$, 95\% CI $[1.13,1.71]$,
+Table~\ref{tab:results} and Figure~\ref{fig:scores} summarize test performances at 300k and 1M training steps. All agents stay balanced long after the force becomes stronger: the mean baseline score after 300k steps is 25052, so an average episode ends at a force of about 275. At 300k steps, noise showed significant improvement over the baseline (ratio $=1.39$, 95\% CI $[1.13,1.71]$,
 Holm-adjusted $p=0.0088$). The combined noise and pessimistic strategy also outperformed the baseline (ratio $=1.28$, 95\% CI $[1.07,1.56]$, Holm-adjusted $p=0.0214$), whereas the pessimistic strategy alone did not (ratio $=1.15$, 95\% CI $[0.94,1.42]$,
 Holm-adjusted $p=0.1722$).
 
-With 1M steps, none of the strategies significantly outperformed the baseline. The noise strategy achieved the highest mean score (40705), the difference with the baseline was not significant (ratio $=1.10$, 95\% CI $[0.94,1.29]$, Holm-adjusted $p=0.7189$). The factorial analysis supports a positive main
+With 1M steps, none of the strategies significantly outperformed the baseline. The noise strategy achieved the highest mean score (40705), but the difference with the baseline was not significant (ratio $=1.10$, 95\% CI $[0.94,1.29]$, Holm-adjusted $p=0.7189$). The factorial analysis supports a positive main
 effect of noise at 300k (ratio $=1.24$, $p=0.0017$), but
 not at 1M (ratio $=1.05$, $p=0.4261$). The main effect of
-pessimistic training was not significant at either checkpoint
+pessimistic training was not significant at either budget
 ($p=0.6310$ at 300k; $p=0.5657$ at 1M).
 
-All strategies showed significant improvement going from 300k steps to 1M steps. The baseline increased by a reported ration of 1.56 ($p=0.0001$), noise by 1.24 ($p=0.0221$), pessimistic training by 1.37 ($p=0.0002$), and the combined strategy by 1.23 ($p=0.0170$).
+All strategies showed significant improvement going from 300k steps to 1M steps. The baseline increased by a factor of 1.56 ($p=0.0001$), noise by 1.24 ($p=0.0221$), pessimistic training by 1.37 ($p=0.0002$), and the combined strategy by 1.23 ($p=0.0170$). For the submitted networks, short poles are the most difficult (Figure~\ref{fig:bars} in the appendix).
 
 \subsection{Agent Behaviour}
 
-Figure~\ref{fig:scores} shows test scores at both checkpoints,
-while Fig.~\ref{fig:behaviour} illustrates behaviour across
-different pole lengths. At 300k steps, the combined strategy had the lowest mean absolute pole angle ($0.0240$) and the least episodes falling before 1000 steps ($1.4\%$). At 1M steps, noise had the lowest mean absolute pole angle ($0.0198$), while the combined strategy had the lowest amount of episodes falling before 1000 steps ($1.2\%$). The early fall rate decreased when going from 300k steps to 1M steps for all strategies. The early fall rate was negatively correlated with log-score ($r=-0.48$ at 300k and $r=-0.39$ at 1M), whereas mean absolute position showed a weaker correlation ($r=-0.12$ and $r=-0.10$).
+To explain the differences, we ran each network for 2 episodes on each of the 30 pole lengths, with other start states than in the test, and we recorded the states in the first 1000 steps. Before the force becomes stronger (steps 1 to 500), the agents with noise kept the cart closest to the centre (mean $|x|$ of 0.62 at 300k and 0.66 at 1M, against 0.96 and 0.85 for the baseline). At 300k steps, the combined strategy had the lowest mean absolute pole angle ($0.0240$ rad) and the least episodes falling before 1000 steps ($1.4\%$, against $8.3\%$ for the baseline). At 1M steps, noise had the lowest mean absolute pole angle ($0.0198$ rad), while the combined strategy had the lowest amount of episodes falling before 1000 steps ($1.2\%$). The early fall rate decreased when going from 300k steps to 1M steps for all strategies. The early fall rate was negatively correlated with log-score ($r=-0.48$ at 300k and $r=-0.39$ at 1M), whereas mean absolute position showed a weaker correlation ($r=-0.12$ and $r=-0.10$).
 
-\begin{table*}[t]
+\begin{table}[t]
     \centering
-    \caption{}
+    \caption{Test scores of the 40 runs per strategy, in thousands. SD: standard deviation of the $\log_{10}$ scores. Ratio: geometric mean against the baseline, with a 95\% bootstrap interval.}
     \label{tab:results}
-    \small
-    \setlength{\tabcolsep}{2pt}
-    \begin{tabular}{llrrrrrrl}
+    \footnotesize
+    \setlength{\tabcolsep}{3pt}
+    \begin{tabular}{llrrrrcc}
         \toprule
-        Steps & Strategy & Mean & Median & Worst &
-        SD ($\log_{10}$) & Saturated/run &
-        Ratio [95\% CI] & Holm $p$ \\
+        Steps & Strategy & Mean & Median & Worst & SD & Ratio [95\% CI] & Holm $p$ \\
         \midrule
-        300k & Baseline
-        & 25052 & 23603 & 4663 & 0.219 & 0.3
-        & 1.00 (ref.) & -- \\
-
-        300k & Noise
-        & 33921 & 31566 & 8436 & 0.193 & 0.5
-        & 1.39 [1.13, 1.71] & 0.0088 \\
-
-        300k & Pessimistic
-        & 28159 & 28222 & 10946 & 0.180 & 0.7
-        & 1.15 [0.94, 1.42] & 0.1722 \\
-
-        300k & Noise + Pessimistic
-        & 30441 & 28642 & 14528 & 0.144 & 1.2
-        & 1.28 [1.07, 1.56] & 0.0214 \\
+        300k & Baseline & 25.1 & 23.6 & 4.7 & 0.22 & -- & -- \\
+        & Noise & 33.9 & 31.6 & 8.4 & 0.19 & 1.39 [1.13, 1.71] & 0.009 \\
+        & Pessimistic & 28.2 & 28.2 & 10.9 & 0.18 & 1.15 [0.94, 1.42] & 0.172 \\
+        & Both & 30.4 & 28.6 & 14.5 & 0.14 & 1.28 [1.07, 1.56] & 0.021 \\
         \midrule
-        1M & Baseline
-        & 37114 & 38093 & 14950 & 0.158 & 1.9
-        & 1.00 (ref.) & -- \\
-
-        1M & Noise
-        & 40705 & 45018 & 10867 & 0.156 & 5.2
-        & 1.10 [0.94, 1.29] & 0.7189 \\
-
-        1M & Pessimistic
-        & 37313 & 39649 & 12146 & 0.147 & 4.3
-        & 1.02 [0.87, 1.19] & 1.0000 \\
-
-        1M & Noise + Pessimistic
-        & 37964 & 37771 & 7765 & 0.177 & 9.2
-        & 1.01 [0.85, 1.20] & 1.0000 \\
-        \bottomrule
-    \end{tabular}
-\end{table*}
-
-\begin{table}[t]
-    \centering
-    \caption{Main effects of noise and pessimistic training
-    in the $2\times2$ factorial design.}
-    \label{tab:2x2}
-    \begin{tabular}{llrr}
-        \toprule
-        Steps & Effect & Ratio & $p$-value \\
-        \midrule
-        300k & Noise & 1.24 & 0.0017 \\
-        300k & Pessimistic & 1.03 & 0.6310 \\
-        \midrule
-        1M & Noise & 1.05 & 0.4261 \\
-        1M & Pessimistic & 0.97 & 0.5657 \\
+        1M & Baseline & 37.1 & 38.1 & 15.0 & 0.16 & -- & -- \\
+        & Noise & 40.7 & 45.0 & 10.9 & 0.16 & 1.10 [0.94, 1.29] & 0.719 \\
+        & Pessimistic & 37.3 & 39.6 & 12.1 & 0.15 & 1.02 [0.87, 1.19] & 1.000 \\
+        & Both & 38.0 & 37.8 & 7.8 & 0.18 & 1.01 [0.85, 1.20] & 1.000 \\
         \bottomrule
     \end{tabular}
 \end{table}
-
-\begin{table}[t]
-    \centering
-    \caption{Performance improvement from 300k to 1M
-    training steps. Ratios compare the same strategy
-    across training checkpoints.}
-    \label{tab:training-progress}
-    \begin{tabular}{lrr}
-        \toprule
-        Strategy & Ratio (1M / 300k) & $p$-value \\
-        \midrule
-        Baseline & 1.56 & 0.0001 \\
-        Noise & 1.24 & 0.0221 \\
-        Pessimistic & 1.37 & 0.0002 \\
-        Noise + Pessimistic & 1.23 & 0.0170 \\
-        \bottomrule
-    \end{tabular}
-\end{table}
-
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=\columnwidth]{bar_plots.pdf}
-    \caption{Behavioural evaluation of the four trained agents
-    across pole lengths.}
-    \label{fig:behaviour}
-\end{figure}
 
 \begin{figure}[t]
     \centering
     \includegraphics[width=0.9\columnwidth]{scores.pdf}
-    \caption{Test scores at 300k and 1M training steps for
-    the baseline, noise, pessimistic, and noise + pessimistic.}
+    \caption{Test score of each run (log scale). The black lines show the mean. Both: noise + pessimistic.}
     \label{fig:scores}
 \end{figure}
 
-
-
-
 \section{Discussion}
 
-We expected observation noise to encourage a smoother policy that maintains a larger safety margin. The significant performance gain at 300k steps is consistent with this statement. The lower mean absolute pole angle of the noise strategy at 1M steps support the possibility of a more conservative control. However, these behavioral differences do not necessarily establish that policy smoothness caused the improvement. At 1M steps, the noise strategy no longer significantly outperformed the baseline, suggesting that its benefit may be more active in the earlier stages of training.
+We expected observation noise to encourage a smoother policy that maintains a larger safety margin. The significant performance gain at 300k steps is consistent with this statement. The lower mean absolute pole angle of the noise strategy at 1M steps supports the possibility of a more conservative control. However, these behavioral differences do not necessarily establish that policy smoothness caused the improvement. At 1M steps, the noise strategy no longer significantly outperformed the baseline, suggesting that its benefit may be more active in the earlier stages of training.
 
-We expected pessimistic targets to discourage actions that lead to failure. Pessimistic training alone did not show a significant improvement over the baseline at either checkpoint, thus the results do not support a clear performance benefit from this change. The combined strategy had the lowest early fall rate at both checkpoints and the best worst-run score at 300k steps, which is consistent with a possible robustness benefit. However, in our experimental setup we cannot conclude if the combination of the strategies provides an additional benefit beyond the noise strategy alone.
+We expected pessimistic targets to discourage actions that lead to failure. Pessimistic training alone did not show a significant improvement over the baseline at either budget, thus the results do not support a clear performance benefit from this change. The combined strategy had the lowest early fall rate at both budgets and the best worst-run score at 300k steps, which is consistent with a possible robustness benefit. However, in our experimental setup we cannot conclude if the combination of the strategies provides an additional benefit beyond the noise strategy alone.
 
 The amount of early falls, within the first 1000 steps, decreased for all strategies between 300k and 1M steps, combined with an increased mean for every strategy between 300k and 1M, shows that improvements are made after 300k steps of training.
 
 \subsection{Limitations}
-The results compare only two training checkpoints; additional checkpoints and experiments would help determine how the effects evolve throughout training and whether the observed differences are robust. 
+The results compare only two training budgets; additional budgets and experiments would help determine how the effects evolve throughout training and whether the observed differences are robust. After 1M steps, between 1.9 (baseline) and 9.2 (both) checkpoints per run got the highest possible validation score. Validation cannot rank these checkpoints, so we keep the latest one, and this can hide a part of the gain of the strategies. We also selected $\sigma$ and $\alpha$ in a pilot on the same task, and our behaviour data covers only the first 1000 steps, while most of the score comes later.
 
 \section{Conclusion}
 
-This paper investigated whether observation noise and pessimistic TD targets improve DQN robustness to stronger forces not seen during training. At 300k steps, noise alone and noise combined with the pessimistic target significantly improved on the baseline, but neither did at 1M steps. The pessimistic strategy alone did not show a significant performance benefit, While the combined strategy reduced the percentage of early falls. Overall, the results suggest that observation noise can help in the early phases of training, but neither strategy showed a lasting performance advantage under the tested conditions.
+This paper investigated whether observation noise and pessimistic TD targets improve DQN robustness to stronger forces not seen during training. All agents stayed balanced long after the force became stronger. At 300k steps, noise alone and noise combined with the pessimistic target significantly improved on the baseline, but neither did at 1M steps. The pessimistic strategy alone did not show a significant performance benefit, while the combined strategy reduced the percentage of early falls. Overall, the results suggest that observation noise can help in the early phases of training, but no strategy showed a lasting performance advantage under the tested conditions. Thus, to answer our research question, the extra robustness comes mainly from what the agent observes, and not from what it optimizes.
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{references}
 
 \clearpage
+\onecolumn
 \appendix
-\section{appendix}
-
-\begin{center}
-    \includegraphics[width=\textwidth]{bar_plots.pdf}
-\end{center}
-\begin{figure*}[t]
+\section{Figures}
+\begin{figure}[h]
     \centering
-    \includegraphics[width=0.5\textwidth]{scores.pdf}
-    \label{fig:scores}
-\end{figure*}
-
+    \includegraphics[width=\textwidth]{bar_plots.pdf}
+    \caption{Test score per pole length of the submitted network of each strategy (mean and standard deviation over the 10 test episodes), after 1M training steps.}
+    \label{fig:bars}
+\end{figure}
 
 \end{document}
